@@ -116,6 +116,49 @@ hardware build artifacts across rule boundaries:
 
 ---
 
+## SystemVerilog & Verilator Rules
+
+Vivisect models SystemVerilog structures with explicit compile ordering:
+
+### `sv_library`
+Compiles SystemVerilog modules and tracks preprocessor include directories.
+
+```starlark
+load("//rules:defs.bzl", "sv_library")
+
+sv_library(
+    name = "counter",
+    srcs = ["rtl/counter.sv"],
+    deps = [":counter_pkg"],
+)
+```
+
+### `sv_package`
+Encapsulates shared SystemVerilog packages (`package ... endpackage`). Packages
+are guaranteed to precede modules during compilation and elaboration.
+
+### `sv_interface`
+Encapsulates SystemVerilog interfaces (`interface ... endinterface`).
+
+### `verilator_lint_test`
+Runs Verilator static lint checks with `--lint-only` without compiler banner
+noise. Generates synthetic stubs when linting packages and interfaces in
+isolation.
+
+### `verilator_test`
+Simulates SystemVerilog designs using Verilator with two testing modes:
+- **`waivers`**: Verilator `.vlt` configuration and waiver files forwarded to
+  the underlying `verilator_library`.
+- **Pure SystemVerilog Testbench (`tb = None`)**: When `tb` is omitted,
+  simulates the top-level SystemVerilog testbench module directly using
+  Verilator 5's `--timing` engine and auto-generated `main()` event loop. This
+  matches the target contract of `xsim_test`, allowing the exact same
+  testbench library to run across both simulators.
+- **C++ Testbench (`tb = "my_tb.cpp"`)**: Transpiles the DUT into C++ and
+  compiles `tb` as the test executable driver.
+
+---
+
 ## AMD Simulation & Elaboration Rules
 
 ### `xsim_test`
@@ -151,14 +194,17 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 ├── LICENSE                      # Apache License, Version 2.0
 ├── NOTICE                       # Copyright attribution & third-party notices
 ├── README.md                    # Workspace overview and documentation
-└── rules/
-    ├── defs.bzl                 # Public API entrypoint
-    ├── providers.bzl            # Hardware Starlark providers
-    ├── stage.bzl                # Stage transitions & build setting
-    ├── support/                 # run_isolated.py runner and unit tests
-    ├── test/                    # providers_test and style_test
-    ├── toolchains/              # Vivado and Verilator toolchains
-    └── xilinx/                  # xvlog, xelab, xsim_test & simulation tests
+├── rules/
+│   ├── defs.bzl                 # Public API entrypoint
+│   ├── providers.bzl            # Hardware Starlark providers
+│   ├── stage.bzl                # Stage transitions & build setting
+│   ├── support/                 # run_isolated.py runner and unit tests
+│   ├── sv/                      # sv_library, verilator rules & tests
+│   ├── test/                    # providers_test and style_test
+│   ├── toolchains/              # Vivado and Verilator toolchains
+│   └── xilinx/                  # xvlog, xelab, xsim_test & simulation tests
+└── examples/
+    └── counter/                 # Parameterized counter RTL & dual-sim tests
 ```
 
 ## Contributing & Agent Guidelines

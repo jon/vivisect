@@ -1,0 +1,158 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_interface",
+    "sv_library",
+    "sv_package",
+    "verilator_lint_test",
+    "verilator_test",
+    "xsim_test",
+    "xvlog",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# Test 1: SystemVerilog packages ordering (pkgs compiled before srcs)
+sv_library(
+    name = "pkg_lib",
+    srcs = ["module_using_pkg.sv"],
+    pkgs = ["test_pkg.sv"],
+)
+
+verilator_lint_test(
+    name = "pkg_lint_test",
+    top = "module_using_pkg",
+    deps = [":pkg_lib"],
+)
+
+# Test 2: Automatic header directory derivation (include_hdrs_dirs = True)
+sv_library(
+    name = "hdr_lib",
+    srcs = ["module_using_hdr.sv"],
+    hdrs = ["inc/magic_def.svh"],
+    include_hdrs_dirs = True,
+)
+
+verilator_lint_test(
+    name = "hdr_lint_test",
+    top = "module_using_hdr",
+    deps = [":hdr_lib"],
+)
+
+# Test 3: Standalone sv_package linting with parameters, enums, structs
+sv_package(
+    name = "pure_pkg",
+    srcs = ["pure_pkg.sv"],
+)
+
+verilator_lint_test(
+    name = "test_package",
+    target_type = "package",
+    top = "pure_pkg",
+    deps = [":pure_pkg"],
+)
+
+# Test 4: Standalone sv_interface linting with modports and signals
+sv_interface(
+    name = "channel_if",
+    srcs = ["channel_if.sv"],
+)
+
+verilator_lint_test(
+    name = "test_interface",
+    target_type = "interface",
+    top = "channel_if",
+    deps = [":channel_if"],
+)
+
+# Test 5: Compilation and simulation ordering in xvlog and xsim_test
+# sv_package -> sv_interface -> sv_library -> testbench
+sv_package(
+    name = "ordering_pkg",
+    srcs = ["ordering_pkg.sv"],
+)
+
+sv_interface(
+    name = "ordering_if",
+    srcs = ["ordering_if.sv"],
+    deps = [":ordering_pkg"],
+)
+
+sv_library(
+    name = "ordering_dut",
+    srcs = ["ordering_dut.sv"],
+    deps = [":ordering_if"],
+)
+
+sv_library(
+    name = "ordering_tb_lib",
+    srcs = ["ordering_tb.sv"],
+    deps = [":ordering_dut"],
+)
+
+xvlog(
+    name = "ordering_xvlog",
+    deps = [":ordering_tb_lib"],
+)
+
+xsim_test(
+    name = "test_xsim_ordering",
+    top = "ordering_tb",
+    deps = [":ordering_tb_lib"],
+)
+
+# Test 6: Parameterized interface linting with overrides
+sv_interface(
+    name = "param_if",
+    srcs = ["param_if.sv"],
+)
+
+verilator_lint_test(
+    name = "test_parameterized_interface",
+    parameters = {
+        "DEPTH": "16",
+        "WIDTH": "32",
+    },
+    target_type = "interface",
+    top = "param_if",
+    deps = [":param_if"],
+)
+
+# Test 7: Out-of-order dependency resolution in verilator_library
+sv_package(
+    name = "ooo_pkg",
+    srcs = ["ooo_pkg.sv"],
+)
+
+sv_library(
+    name = "ooo_module",
+    srcs = ["ooo_module.sv"],
+)
+
+sv_library(
+    name = "ooo_tb_lib",
+    srcs = ["ooo_tb.sv"],
+    deps = [":ooo_module"],
+)
+
+verilator_test(
+    name = "test_out_of_order_deps",
+    top = "ooo_tb",
+    deps = [
+        ":ooo_tb_lib",
+        ":ooo_pkg",
+    ],
+)

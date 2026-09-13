@@ -20,9 +20,56 @@ providers_test_suite(name = "providers_test")
 py_test(
     name = "style_test",
     srcs = ["style_test.py"],
-    tags = [
-        "external",
-        "local",
-        "no-sandbox",
-    ],
+    tags = ["local", "no-sandbox", "external"],
+)
+
+load("//rules:defs.bzl", "sv_library")
+load(
+    ":stage_transition_test.bzl",
+    "sim_inspector",
+    "sim_stage_test",
+    "synth_inspector",
+    "synth_stage_test",
+    "verilator_inspector",
+    "verilator_stage_test",
+)
+
+# Multi-stage library selecting source files based on target stage
+sv_library(
+    name = "stage_select_lib",
+    srcs = select({
+        "//rules:is_synthesis": ["synth_impl.sv"],
+        "//rules:is_simulation": ["sim_impl.sv"],
+        "//rules:is_verilator": ["verilator_impl.sv"],
+    }),
+)
+
+synth_inspector(
+    name = "synth_inspect",
+    dep = ":stage_select_lib",
+)
+
+synth_stage_test(
+    name = "synth_stage_test",
+    target_under_test = ":synth_inspect",
+)
+
+sim_inspector(
+    name = "sim_inspect",
+    dep = ":stage_select_lib",
+)
+
+sim_stage_test(
+    name = "sim_stage_test",
+    target_under_test = ":sim_inspect",
+)
+
+verilator_inspector(
+    name = "verilator_inspect",
+    dep = ":stage_select_lib",
+)
+
+verilator_stage_test(
+    name = "verilator_stage_test",
+    target_under_test = ":verilator_inspect",
 )

@@ -1,0 +1,74 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("//rules:defs.bzl", "sv_library", "verilator_lint_test", "verilator_test", "xsim_test")
+
+package(default_visibility = ["//visibility:public"])
+
+sv_library(
+    name = "waiver_mod",
+    srcs = ["waiver_mod.sv"],
+    waivers = ["waiver_rules.vlt"],
+)
+
+sv_library(
+    name = "waiver_tb_lib",
+    srcs = ["waiver_tb.sv"],
+    deps = [":waiver_mod"],
+)
+
+verilator_lint_test(
+    name = "waiver_lint_test",
+    top = "waiver_mod",
+    warning_flags = [
+        "-Wall",
+        "-Werror-WIDTHEXPAND",
+    ],
+    deps = [":waiver_mod"],
+)
+
+verilator_test(
+    name = "waiver_verilator_test",
+    top = "waiver_tb",
+    verilator_flags = [
+        "-Wall",
+        "-Werror-WIDTHEXPAND",
+    ],
+    deps = [":waiver_tb_lib"],
+)
+
+xsim_test(
+    name = "waiver_xsim_test",
+    top = "waiver_tb",
+    deps = [":waiver_tb_lib"],
+)
+
+# Test partitioning of .vlt files declared in srcs
+sv_library(
+    name = "waiver_mod_in_srcs",
+    srcs = [
+        "waiver_mod.sv",
+        "waiver_rules.vlt",
+    ],
+)
+
+verilator_lint_test(
+    name = "waiver_in_srcs_lint_test",
+    top = "waiver_mod",
+    warning_flags = [
+        "-Wall",
+        "-Werror-WIDTHEXPAND",
+    ],
+    deps = [":waiver_mod_in_srcs"],
+)

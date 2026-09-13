@@ -1,0 +1,78 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_cc//cc:defs.bzl", "cc_test")
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "verilator_library",
+    "verilator_lint_test",
+    "verilator_test",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# 1. Synthesizable Counter RTL
+sv_library(
+    name = "counter_rtl",
+    srcs = ["rtl/counter.sv"],
+)
+
+# 2. Static Lint Check
+verilator_lint_test(
+    name = "counter_lint_test",
+    top = "counter",
+    deps = [":counter_rtl"],
+)
+
+# 3. Pure SystemVerilog Testbench (Dual-Simulator)
+# The exact same SV testbench library is simulated under BOTH Verilator and AMD xsim.
+sv_library(
+    name = "counter_tb_lib",
+    srcs = ["tb/counter_tb.sv"],
+    deps = [":counter_rtl"],
+)
+
+# Run under modern Verilator (v5+ with --timing and auto-generated main)
+verilator_test(
+    name = "counter_verilator_test",
+    top = "counter_tb",
+    deps = [":counter_tb_lib"],
+)
+
+# Run under AMD xsim (4-state event-driven simulation)
+xsim_test(
+    name = "counter_xsim_test",
+    top = "counter_tb",
+    deps = [":counter_tb_lib"],
+)
+
+# 4. Decoupled C++ Model & Native C++ Testbench
+# Compile RTL into a reusable C++ library exposing Vcounter class
+verilator_library(
+    name = "counter_cc_model",
+    top = "counter",
+    deps = [":counter_rtl"],
+)
+
+# Link C++ testbench against the Verilated C++ model
+cc_test(
+    name = "counter_cpp_test",
+    srcs = ["tb/counter_tb.cpp"],
+    deps = [
+        ":counter_cc_model",
+        "@verilator_default//:runtime",
+    ],
+)
