@@ -1,0 +1,33 @@
+# Bazel convenience symlinks
+/bazel-*
+
+# AMD / Xilinx EDA tool spew
+*.log
+*.jou
+*.pb
+*.str
+*.wdb
+*.vcd
+*.fst
+
+# Design checkpoints and bitstreams
+*.dcp
+*.bit
+*.bin
+*.mcs
+
+# EDA temporary / cache directories
+.Xil/
+xsim.dir/
+hd_visual/
+_scratch_*/
+_xil_scratch_*/
+
+# Editor / OS / Python metadata
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store

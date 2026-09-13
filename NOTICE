@@ -1,0 +1,37 @@
+Vivisect
+Copyright 2026 The Vivisect Authors
+
+This product includes software developed at
+Vivisect (https://github.com/vivisect-eda/vivisect).
+
+===============================================================================
+External Toolchain Boundaries & Operational Interfaces
+===============================================================================
+
+Vivisect interfaces with external electronic design automation (EDA) toolchains
+that are not bundled or redistributed with this software:
+
+  * AMD Vivado Design Suite:
+    Vivisect provides Starlark build rules and orchestration wrappers that
+    invoke host-installed AMD Vivado tools (such as xvlog, xelab, xsim, and
+    vivado). Vivisect does not vendor or redistribute any AMD binaries, header
+    files, or proprietary libraries. All trademarks and copyrights in AMD
+    Vivado belong to Advanced Micro Devices, Inc.
+
+  * Verilator:
+    Vivisect provides build rules and test runners that execute the open-source
+    Verilator compiler and link generated simulation harnesses against the
+    Verilator C++ runtime (verilated.h) under the terms of the Verilator linking
+    exception (LGPL-3.0 with static linking exception / Artistic License 2.0).
+    Verilator is copyright its respective authors and contributors.
+
+===============================================================================
+Test Fixtures & Mock Vendor Data
+===============================================================================
+
+Unit test fixtures within this repository (e.g., in rules/test/timing_runner_test.py
+and rules/support/test/run_isolated_test.py) contain synthetic mock tool log
+outputs and vendor copyright strings (such as "Copyright 1986-2022 Xilinx, Inc.").
+These strings are functional test data used solely to verify log parsing, error
+trapping, and process isolation, and do not constitute redistribution of vendor
+software or IP.
