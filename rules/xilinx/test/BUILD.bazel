@@ -1,0 +1,100 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_python//python:defs.bzl", "py_test")
+load("//rules:defs.bzl", "xsim_test", "xvlog")
+
+package(default_visibility = ["//visibility:public"])
+
+# xvlog compilation target
+xvlog(
+    name = "clean_tb_xvlog",
+    srcs = ["clean_tb.sv"],
+    lib_name = "work",
+)
+
+# xvlog compilation with glbl
+xvlog(
+    name = "glbl_xvlog",
+    srcs = ["glbl_tb.sv"],
+    glbl = True,
+    lib_name = "work",
+)
+
+# Simulation test verifying unisims_ver and glbl resolution: must pass
+xsim_test(
+    name = "glbl_xsim_test",
+    srcs = ["glbl_tb.sv"],
+    libs = ["unisims_ver"],
+    top = "glbl_tb",
+)
+
+# Clean simulation test: must pass
+xsim_test(
+    name = "clean_xsim_test",
+    srcs = ["clean_tb.sv"],
+    top = "clean_tb",
+)
+
+# Waveform recording simulation test: must pass
+xsim_test(
+    name = "waveform_xsim_test",
+    srcs = ["clean_tb.sv"],
+    top = "clean_tb",
+    waveforms = True,
+)
+
+# User $display simulation test: must pass without false positive
+xsim_test(
+    name = "display_xsim_test",
+    srcs = ["display_tb.sv"],
+    top = "display_tb",
+)
+
+# $error with fail_on_error = False: must pass
+xsim_test(
+    name = "error_ignored_xsim_test",
+    fail_on_error = False,
+    srcs = ["error_tb.sv"],
+    top = "error_tb",
+)
+
+# $fatal simulation test: tagged manual because it deliberately exits with 1
+xsim_test(
+    name = "fatal_xsim_test",
+    srcs = ["fatal_tb.sv"],
+    tags = ["manual"],
+    top = "fatal_tb",
+)
+
+# $error simulation test: tagged manual because it deliberately exits with 1
+xsim_test(
+    name = "error_failing_xsim_test",
+    fail_on_error = True,
+    srcs = ["error_tb.sv"],
+    tags = ["manual"],
+    top = "error_tb",
+)
+
+# Automated integration test verifying fatal_xsim_test and error_failing_xsim_test
+# fail with exit code 1 and accurate diagnostics.
+py_test(
+    name = "error_trapping_test",
+    srcs = ["error_trapping_test.py"],
+    data = [
+        ":error_failing_xsim_test",
+        ":fatal_xsim_test",
+    ],
+    tags = ["requires-network"],
+)

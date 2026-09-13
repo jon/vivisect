@@ -114,6 +114,33 @@ hardware build artifacts across rule boundaries:
   directories.
 - `TclInfo`: Transitive Tcl scripts and hooks.
 
+---
+
+## AMD Simulation & Elaboration Rules
+
+### `xsim_test`
+Executes elaborated simulation snapshots under `xsim` with native multi-line
+error trapping.
+
+- `waveforms = True`: Automatically captures signals and exports `<name>.wdb`.
+- `libs = ["unisims_ver"]`: UNISIM library dependencies automatically enable
+  `glbl` elaboration and bind `glbl.v` from the toolchain.
+
+### `xelab`
+Elaborates SystemVerilog/Verilog sources into an `xsim.dir/<snapshot>` artifact.
+
+- `libs`: Simulation libraries passed to `-L` (e.g. `["unisims_ver"]`).
+- `Standard glbl.v support`: When `"unisims_ver"` is specified in `libs` or
+  `"glbl"` is in `tops`, `xelab` automatically appends `-top glbl` and
+  compiles Vivado's standard `glbl.v` (resolved from the Vivado toolchain) via
+  `-svlog`, unless user sources already define `glbl.v`.
+
+### `xvlog`
+Compiles SystemVerilog/Verilog sources into an xsim library.
+
+- `glbl = True`: Automatically includes and compiles Vivado's standard `glbl.v`
+  into the generated library.
+
 ## Repository Layout
 
 ```
@@ -125,11 +152,13 @@ hardware build artifacts across rule boundaries:
 ├── NOTICE                       # Copyright attribution & third-party notices
 ├── README.md                    # Workspace overview and documentation
 └── rules/
+    ├── defs.bzl                 # Public API entrypoint
     ├── providers.bzl            # Hardware Starlark providers
     ├── stage.bzl                # Stage transitions & build setting
     ├── support/                 # run_isolated.py runner and unit tests
     ├── test/                    # providers_test and style_test
-    └── toolchains/              # Vivado and Verilator toolchains
+    ├── toolchains/              # Vivado and Verilator toolchains
+    └── xilinx/                  # xvlog, xelab, xsim_test & simulation tests
 ```
 
 ## Contributing & Agent Guidelines
