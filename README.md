@@ -10,12 +10,17 @@ Hardware development workflows frequently suffer from monolithic,
 non-incremental scripts and invasive tool behavior. Vivisect bridges AMD
 FPGA tooling and Verilator into Bazel:
 
-- **Isolated Execution**: Strict per-action scratch directories eliminate
-  EDA file spew (`.Xil/`, `*.log`, `*.jou`, `*.pb`) in workspace
-  directories.
+- **Isolated & Silent Execution**: Strict per-action scratch directories
+  eliminate EDA file spew (`.Xil/`, `*.log`, `*.jou`, `*.pb`) in workspace
+  directories, while suppressing compiler and tool banners on success to
+  adhere to Bazel's silence-on-success discipline. Detailed logs are
+  preserved in declared `.log` artifacts and flushed to `stderr` on failure.
 - **Incremental Multi-Stage Caching**: Decomposes synthesis, placement &
   routing, and bitstream generation into cached Design Checkpoint (`.dcp`)
   stages.
+- **Target-Stage Transitions (`select()` support)**: Automatic incoming
+  transitions allow SystemVerilog code to select between synthesis stubs,
+  simulation netlists, and Verilator models without CLI flags or cache churn.
 - **Licensing Preservation**: Forwards floating and node-locked license
   configurations without exposing user directories to corruption.
 
@@ -31,9 +36,9 @@ FPGA tooling and Verilator into Bazel:
 
 ## Quickstart
 
-Verify workspace configuration:
+Run the full automated test suite:
 ```bash
-bazel build //...
+bazel test //...
 ```
 
 ---
@@ -68,6 +73,46 @@ preserving existing floating and node-locked licenses:
   `LM_LICENSE_FILE` action environment variables.
 - **Node-Locked Licenses**: Preserved via `$HOME/.Xilinx` mounts into
   isolated execution environments.
+- **Silence on Success**: Tool execution logs are captured silently and
+  written to declared log files. Stderr diagnostics are flushed automatically
+  if an action fails. Interactive debug mode is available with `--verbose`.
+
+---
+
+## Target-Stage Transitions
+
+Vivisect uses a custom build setting `//rules:stage` to automatically select
+appropriate target variants across build phases:
+
+| Stage | Intended Usage | Rule Behavior |
+| :--- | :--- | :--- |
+| `synthesis` | FPGA synthesis & implementation | Direct RTL or synthesis stubs |
+| `simulation` | Vivado `xsim` simulation | Full RTL or simulation netlists |
+| `verilator` | Verilator linting & C++ transpilation | Transpiles or lints via Verilator |
+
+SystemVerilog libraries can provide stage-dependent implementations using
+standard `select()` statements on the stage label.
+
+---
+
+## Hardware Starlark Providers
+
+Vivisect defines typed Starlark providers in `rules/providers.bzl` to propagate
+hardware build artifacts across rule boundaries:
+
+- `SvInfo`: Transitive SystemVerilog sources, headers, include directories,
+  defines, and waivers with postorder dependency ordering.
+- `VivadoDcpInfo`: Checkpoint (`.dcp`) files, structural Verilog netlists, and
+  sanitized black-box stubs.
+- `VivadoConstraintsInfo`: Stage-scoped design constraints (`synth`, `impl`,
+  `scoped`).
+- `VivadoPartInfo`: Canonical silicon part specification (`device`, `package`,
+  `speed`).
+- `VivadoBoardInfo`: Board-level part bindings and master constraint libraries.
+- `XsimSnapshotInfo`: Compiled snapshot artifacts from `xelab`.
+- `VerilatorCppInfo`: C++ sources transpiled by Verilator and include
+  directories.
+- `TclInfo`: Transitive Tcl scripts and hooks.
 
 ## Repository Layout
 
@@ -78,7 +123,13 @@ preserving existing floating and node-locked licenses:
 ├── BUILD.bazel                  # Root package declaration & style sources
 ├── LICENSE                      # Apache License, Version 2.0
 ├── NOTICE                       # Copyright attribution & third-party notices
-└── README.md                    # Workspace overview and documentation
+├── README.md                    # Workspace overview and documentation
+└── rules/
+    ├── providers.bzl            # Hardware Starlark providers
+    ├── stage.bzl                # Stage transitions & build setting
+    ├── support/                 # run_isolated.py runner and unit tests
+    ├── test/                    # providers_test and style_test
+    └── toolchains/              # Vivado and Verilator toolchains
 ```
 
 ## Contributing & Agent Guidelines
