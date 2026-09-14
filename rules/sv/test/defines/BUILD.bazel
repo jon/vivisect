@@ -1,0 +1,95 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "verilator_lint_test",
+    "verilator_test",
+    "vivado_synth",
+    "vivado_utilization_test",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# Header B library
+sv_library(
+    name = "hdr_b_lib",
+    hdrs = ["inc_b/header_b.svh"],
+    include_hdrs_dirs = True,
+)
+
+# Header A library includes Header B
+sv_library(
+    name = "hdr_a_lib",
+    hdrs = ["inc_a/header_a.svh"],
+    include_hdrs_dirs = True,
+    deps = [":hdr_b_lib"],
+)
+
+# Module library testing defines and nested headers
+sv_library(
+    name = "defines_mod_lib",
+    srcs = ["defines_mod.sv"],
+    defines = [
+        "WIDTH=32",
+        "FEATURE_ENABLED=1",
+    ],
+    deps = [":hdr_a_lib"],
+)
+
+sv_library(
+    name = "defines_tb_lib",
+    srcs = ["defines_tb.sv"],
+    deps = [":defines_mod_lib"],
+)
+
+# 1. Verilator Lint Test
+verilator_lint_test(
+    name = "defines_lint_test",
+    top = "defines_mod",
+    deps = [":defines_mod_lib"],
+)
+
+# 2. Pure SystemVerilog Testbench under Verilator
+verilator_test(
+    name = "defines_verilator_test",
+    top = "defines_tb",
+    deps = [":defines_tb_lib"],
+)
+
+# 3. AMD xsim Simulation Test
+xsim_test(
+    name = "defines_xsim_test",
+    top = "defines_tb",
+    deps = [":defines_tb_lib"],
+)
+
+# 4. Out-of-Context Synthesis in Vivado
+vivado_synth(
+    name = "defines_synth",
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    top = "defines_mod",
+    deps = [":defines_mod_lib"],
+)
+
+# 5. Utilization Gate
+vivado_utilization_test(
+    name = "defines_util_test",
+    checkpoint = ":defines_synth",
+    max_luts = 50,
+    max_registers = 50,
+)

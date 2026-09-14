@@ -1,0 +1,118 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "verilator_lint_test",
+    "verilator_test",
+    "vivado_synth",
+    "vivado_utilization_test",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# Diamond Dependency Package DAG
+#            pkg_base
+#           /        \
+#     pkg_math      pkg_protocol
+#           \        /
+#           pkg_system
+#               |
+#          dag_encoder
+
+sv_library(
+    name = "pkg_base",
+    pkgs = ["base_pkg.sv"],
+)
+
+sv_library(
+    name = "pkg_math",
+    pkgs = ["math_pkg.sv"],
+    deps = [":pkg_base"],
+)
+
+sv_library(
+    name = "pkg_protocol",
+    pkgs = ["protocol_pkg.sv"],
+    deps = [":pkg_base"],
+)
+
+sv_library(
+    name = "pkg_system",
+    pkgs = ["system_pkg.sv"],
+    deps = [
+        ":pkg_math",
+        ":pkg_protocol",
+    ],
+)
+
+sv_library(
+    name = "dag_encoder",
+    srcs = ["dag_encoder.sv"],
+    deps = [":pkg_system"],
+)
+
+sv_library(
+    name = "dag_tb_lib",
+    srcs = ["dag_tb.sv"],
+    deps = [":dag_encoder"],
+)
+
+# 1. Verilator Strict Lint Test (-Wall)
+verilator_lint_test(
+    name = "dag_lint_test",
+    top = "dag_encoder",
+    deps = [":dag_encoder"],
+)
+
+# 2. Pure SystemVerilog Testbench under Verilator (--timing)
+verilator_test(
+    name = "dag_verilator_test",
+    top = "dag_tb",
+    deps = [":dag_tb_lib"],
+)
+
+# 3. C++ Testbench under Verilator
+verilator_test(
+    name = "dag_cpp_test",
+    tb = "dag_tb.cpp",
+    top = "dag_encoder",
+    deps = [":dag_encoder"],
+)
+
+# 4. AMD xsim Simulation Test
+xsim_test(
+    name = "dag_xsim_test",
+    top = "dag_tb",
+    deps = [":dag_tb_lib"],
+)
+
+# 5. Out-of-Context Synthesis in Vivado
+vivado_synth(
+    name = "dag_synth",
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    top = "dag_encoder",
+    deps = [":dag_encoder"],
+)
+
+# 6. Utilization Assertion
+vivado_utilization_test(
+    name = "dag_util_test",
+    checkpoint = ":dag_synth",
+    max_luts = 100,
+    max_registers = 100,
+)

@@ -1,0 +1,107 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "verilator_lint_test",
+    "verilator_test",
+    "vivado_impl",
+    "vivado_synth",
+    "vivado_timing_test",
+    "vivado_utilization_test",
+    "xdc_library",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+sv_library(
+    name = "addsub_behavioral_lib",
+    srcs = ["addsub_8bit_behavioral.sv"],
+)
+
+sv_library(
+    name = "calc_subsystem_lib",
+    srcs = ["calc_subsystem.sv"],
+    deps = [
+        ":addsub_behavioral_lib",
+        "//examples/ip_core:addsub_8bit",
+    ],
+)
+
+sv_library(
+    name = "calc_subsystem_tb_lib",
+    srcs = ["calc_subsystem_tb.sv"],
+    deps = [":calc_subsystem_lib"],
+)
+
+xdc_library(
+    name = "calc_subsystem_xdc",
+    srcs = ["calc_subsystem.xdc"],
+    used_in = [
+        "impl",
+        "synth",
+    ],
+)
+
+verilator_lint_test(
+    name = "calc_subsystem_lint_test",
+    lint_flags = ["-Wno-DECLFILENAME"],
+    top = "calc_subsystem",
+    deps = [":calc_subsystem_lib"],
+)
+
+verilator_test(
+    name = "calc_subsystem_verilator_test",
+    top = "calc_subsystem_tb",
+    deps = [":calc_subsystem_tb_lib"],
+)
+
+xsim_test(
+    name = "calc_subsystem_xsim_test",
+    libs = ["unisims_ver"],
+    top = "calc_subsystem_tb",
+    deps = [":calc_subsystem_tb_lib"],
+)
+
+vivado_synth(
+    name = "calc_subsystem_synth",
+    cells = {
+        "u_addsub": "//examples/ip_core:addsub_8bit",
+    },
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    top = "calc_subsystem",
+    deps = [":calc_subsystem_lib"],
+    xdc = [":calc_subsystem_xdc"],
+)
+
+vivado_impl(
+    name = "calc_subsystem_impl",
+    checkpoint = ":calc_subsystem_synth",
+)
+
+vivado_timing_test(
+    name = "calc_subsystem_timing_test",
+    checkpoint = ":calc_subsystem_impl",
+    min_wns = "0.0",
+)
+
+vivado_utilization_test(
+    name = "calc_subsystem_util_test",
+    checkpoint = ":calc_subsystem_impl",
+    max_luts = 100,
+    max_registers = 100,
+)

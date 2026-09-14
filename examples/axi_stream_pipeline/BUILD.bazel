@@ -1,0 +1,113 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "verilator_lint_test",
+    "verilator_test",
+    "vivado_impl",
+    "vivado_synth",
+    "vivado_timing_test",
+    "vivado_utilization_test",
+    "xdc_library",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+sv_library(
+    name = "axis_skid_buffer_lib",
+    srcs = ["axis_skid_buffer.sv"],
+)
+
+sv_library(
+    name = "axis_crc32_lib",
+    srcs = ["axis_crc32.sv"],
+)
+
+sv_library(
+    name = "axis_packet_filter_lib",
+    srcs = ["axis_packet_filter.sv"],
+)
+
+sv_library(
+    name = "axis_pipeline_lib",
+    srcs = ["axis_pipeline_top.sv"],
+    deps = [
+        ":axis_crc32_lib",
+        ":axis_packet_filter_lib",
+        ":axis_skid_buffer_lib",
+    ],
+)
+
+sv_library(
+    name = "axis_pipeline_tb_lib",
+    srcs = ["axis_pipeline_tb.sv"],
+    deps = [":axis_pipeline_lib"],
+)
+
+xdc_library(
+    name = "axis_pipeline_xdc",
+    srcs = ["axis_pipeline.xdc"],
+    used_in = [
+        "impl",
+        "synth",
+    ],
+)
+
+verilator_lint_test(
+    name = "axis_pipeline_lint_test",
+    top = "axis_pipeline_top",
+    deps = [":axis_pipeline_lib"],
+)
+
+verilator_test(
+    name = "axis_pipeline_verilator_test",
+    top = "axis_pipeline_tb",
+    deps = [":axis_pipeline_tb_lib"],
+)
+
+xsim_test(
+    name = "axis_pipeline_xsim_test",
+    top = "axis_pipeline_tb",
+    deps = [":axis_pipeline_tb_lib"],
+)
+
+vivado_synth(
+    name = "axis_pipeline_synth",
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    top = "axis_pipeline_top",
+    deps = [":axis_pipeline_lib"],
+    xdc = [":axis_pipeline_xdc"],
+)
+
+vivado_impl(
+    name = "axis_pipeline_impl",
+    checkpoint = ":axis_pipeline_synth",
+)
+
+vivado_timing_test(
+    name = "axis_pipeline_timing_test",
+    checkpoint = ":axis_pipeline_impl",
+    min_wns = "0.0",
+)
+
+vivado_utilization_test(
+    name = "axis_pipeline_util_test",
+    checkpoint = ":axis_pipeline_impl",
+    max_luts = 300,
+    max_registers = 300,
+)

@@ -1,0 +1,59 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("@rules_python//python:defs.bzl", "py_test")
+load(
+    "//rules:defs.bzl",
+    "verilator_lint_test",
+    "verilator_test",
+    "xsim_test",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# Deliberate lint/syntax failure (manual tag so bazel test //... doesn't fail)
+verilator_lint_test(
+    name = "failing_lint_test",
+    srcs = ["syntax_error.sv"],
+    tags = ["manual"],
+    top = "syntax_error",
+)
+
+# Deliberate xsim assertion failure
+xsim_test(
+    name = "failing_assertion_xsim",
+    srcs = ["assertion_fail_tb.sv"],
+    tags = ["manual"],
+    top = "assertion_fail_tb",
+)
+
+# Deliberate verilator assertion failure
+verilator_test(
+    name = "failing_assertion_verilator",
+    srcs = ["assertion_fail_tb.sv"],
+    tags = ["manual"],
+    top = "assertion_fail_tb",
+)
+
+# Automated negative trapping test verifying all deliberate failure modes are trapped
+py_test(
+    name = "negative_trapping_test",
+    srcs = ["negative_trapping_test.py"],
+    data = [
+        ":failing_assertion_verilator",
+        ":failing_assertion_xsim",
+        ":failing_lint_test",
+    ],
+    tags = ["requires-network"],
+)
