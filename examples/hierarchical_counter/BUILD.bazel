@@ -1,0 +1,167 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load(
+    "//rules:defs.bzl",
+    "sv_library",
+    "vivado_bitstream",
+    "vivado_impl",
+    "vivado_synth",
+    "vivado_timing_test",
+    "vivado_utilization_test",
+    "xdc_library",
+)
+
+package(default_visibility = ["//visibility:public"])
+
+# 1. RTL Libraries
+sv_library(
+    name = "leaf_adder_rtl",
+    srcs = ["leaf_adder.sv"],
+)
+
+sv_library(
+    name = "mid_accum_rtl",
+    srcs = ["mid_accum.sv"],
+)
+
+sv_library(
+    name = "top_system_rtl",
+    srcs = ["top_system.sv"],
+)
+
+# 2. Constraints
+xdc_library(
+    name = "arty_pins",
+    srcs = ["arty_pins.xdc"],
+    used_in = [
+        "synth",
+        "impl",
+    ],
+)
+
+# 3. Hierarchical Synthesis
+# Leaf: OOC Synthesis of leaf adder
+vivado_synth(
+    name = "leaf_ooc",
+    out_of_context = True,
+    parameters = {
+        "INVERT_B": "0",
+        "WIDTH": "8",
+    },
+    part = "//parts:xc7a100tcsg324-1",
+    deps = [":leaf_adder_rtl"],
+    top = "leaf_adder",
+)
+
+# Parameterized OOC variant: 16-bit width with inverted B input
+vivado_synth(
+    name = "leaf_16bit_ooc",
+    out_of_context = True,
+    parameters = {
+        "INVERT_B": "1",
+        "WIDTH": "16",
+    },
+    part = "//parts:xc7a100tcsg324-1",
+    deps = [":leaf_adder_rtl"],
+    top = "leaf_adder",
+)
+
+# Mid: OOC Synthesis of accumulator, stitching leaf adder via cells
+vivado_synth(
+    name = "mid_ooc",
+    cells = {
+        "u_leaf": ":leaf_ooc",
+    },
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    deps = [":mid_accum_rtl"],
+    top = "mid_accum",
+)
+
+# Top: Synthesis of entire system, stitching accumulator via cells
+vivado_synth(
+    name = "top_synth",
+    board = "//boards/digilent/arty_a7_100:arty_a7_100",
+    cells = {
+        "u_mid": ":mid_ooc",
+    },
+    out_of_context = False,
+    deps = [":top_system_rtl"],
+    top = "top_system",
+    xdc = [":arty_pins"],
+)
+
+# 4. Resource Utilization Verification Tests
+vivado_utilization_test(
+    name = "leaf_util_test",
+    checkpoint = ":leaf_ooc",
+    max_luts = 50,
+    max_registers = 50,
+)
+
+vivado_utilization_test(
+    name = "leaf_16bit_util_test",
+    checkpoint = ":leaf_16bit_ooc",
+    max_luts = 50,
+    max_registers = 50,
+)
+
+vivado_utilization_test(
+    name = "mid_util_test",
+    checkpoint = ":mid_ooc",
+    max_lut_pct = "5.0",
+    max_luts = 100,
+    max_register_pct = "5.0",
+    max_registers = 100,
+)
+
+vivado_utilization_test(
+    name = "top_util_test",
+    checkpoint = ":top_synth",
+    max_lut_pct = "5.0",
+    max_luts = 500,
+    max_register_pct = "5.0",
+    max_registers = 500,
+)
+
+# 5. Place & Route Implementation
+vivado_impl(
+    name = "top_impl",
+    board = "//boards/digilent/arty_a7_100:arty_a7_100",
+    checkpoint = ":top_synth",
+    xdc = [":arty_pins"],
+)
+
+# Post-Route Utilization Verification
+vivado_utilization_test(
+    name = "top_post_route_util_test",
+    checkpoint = ":top_impl",
+    max_luts = 500,
+    max_registers = 500,
+)
+
+# Post-Route Timing Closure Verification
+vivado_timing_test(
+    name = "top_timing_test",
+    checkpoint = ":top_impl",
+    min_wns = "0.0",
+)
+
+# 6. FPGA Bitstream & SPI Flash Binary Generation
+vivado_bitstream(
+    name = "top_bitstream",
+    bin_file = True,
+    checkpoint = ":top_impl",
+)

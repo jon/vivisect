@@ -304,6 +304,7 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 ├── NOTICE                       # Copyright attribution & third-party notices
 ├── README.md                    # Workspace overview and documentation
 ├── parts/                       # Canonical silicon part definitions
+├── boards/                      # Development board definitions
 ├── vendor/                      # Third-party upstream board constraints
 ├── rules/
 │   ├── defs.bzl                 # Public API entrypoint
@@ -316,6 +317,7 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 │   └── xilinx/                  # FPGA synthesis, impl, bitstream & xsim
 └── examples/
     ├── counter/                 # Parameterized counter RTL & dual-sim tests
+    ├── hierarchical_counter/    # Multi-tier OOC synthesis, impl, bitstream
     └── ip_core/                 # Vivado IP Catalog core generation example
 ```
 
