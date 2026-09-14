@@ -18,9 +18,23 @@ FPGA tooling and Verilator into Bazel:
 - **Incremental Multi-Stage Caching**: Decomposes synthesis, placement &
   routing, and bitstream generation into cached Design Checkpoint (`.dcp`)
   stages.
+- **Hierarchical Out-of-Context Stitching**: Compose multi-tier FPGA
+  designs via `cells = {"u_inst": ":cell_synth"}` with automated stub
+  generation and in-memory netlist stitching.
+- **Machine-Readable Utilization Gates**: Enforce strict FPGA resource
+  budgets (LUTs, registers, BRAM, DSP) via `vivado_utilization_test` in
+  milliseconds without launching Vivado.
 - **Target-Stage Transitions (`select()` support)**: Automatic incoming
   transitions allow SystemVerilog code to select between synthesis stubs,
   simulation netlists, and Verilator models without CLI flags or cache churn.
+- **Hardware Abstraction**: Canonical silicon parts (`vivado_part`),
+  development boards (`vivado_board`), and constraint categorization
+  (`xdc_library`).
+- **IP Catalog Codegen**: Configure and generate vendor IP cores
+  (`vivado_ip`) with black-box stubs for synthesis and functional netlists
+  for simulation.
+- **Fast Simulation & Linting**: Co-locates rapid Verilator lint checks
+  and C++ simulations alongside standard Vivado `xsim` regressions.
 - **Licensing Preservation**: Forwards floating and node-locked license
   configurations without exposing user directories to corruption.
 
@@ -92,6 +106,101 @@ appropriate target variants across build phases:
 
 SystemVerilog libraries can provide stage-dependent implementations using
 standard `select()` statements on the stage label.
+
+---
+
+## Hardware Definitions & Constraints
+
+### `vivado_part`
+Declares canonical silicon part strings (`<device><package><speed_grade>`):
+
+```starlark
+load("//rules:defs.bzl", "vivado_part")
+
+vivado_part(
+    name = "xc7a100tcsg324-1",
+    device = "xc7a100t",
+    family = "artix7",
+    package = "csg324",
+    speed = "-1",
+)
+```
+
+### `xdc_library`
+Manages physical and timing design constraints categorized by stage and
+scoping:
+
+```starlark
+load("//rules:defs.bzl", "xdc_library")
+
+xdc_library(
+    name = "pinout_constraints",
+    srcs = ["constraints/pins.xdc"],
+    used_in = ["synth", "impl"],
+)
+```
+
+### `vivado_board`
+Binds an FPGA part to a master constraint library and optional AMD board part
+identifier:
+
+```starlark
+load("//rules:defs.bzl", "vivado_board")
+
+vivado_board(
+    name = "arty_a7_100",
+    board_part = "digilentinc.com:arty-a7-100:part0:1.1",
+    constraints = [":master_xdc"],
+    part = "//parts:xc7a100tcsg324-1",
+)
+```
+
+---
+
+## FPGA Build Pipeline
+
+Vivisect decomposes FPGA synthesis and implementation into composable,
+incremental targets:
+
+### `vivado_synth`
+Synthesizes SystemVerilog/Verilog designs using AMD Vivado:
+- **Top-Level Parameters (`parameters`)**: Dictionary mapping top-level module
+  parameter names to values (passed as `-generic` to `synth_design`),
+  enabling parameterized out-of-context checkpoint and stub generation.
+- **Out-of-Context (OOC)**: Set `out_of_context = True` to disable I/O buffer
+  insertion and automatically generate a black-box Verilog stub
+  (`<name>_stub.v`).
+- **Hermetic Stubs**: Automatically sanitizes generated black-box stubs by
+  stripping execution timestamps (`// Date`), hostnames (`// Host`), and
+  scratch paths (`// Command`) to guarantee byte-for-byte reproducibility
+  across builds.
+- **Hierarchical Cell Linking (`cells`)**: Stitch child out-of-context
+  checkpoints into a parent netlist using `cells = {"u_instance":
+  ":child_ooc"}`. Synthesis runs in two stages: synthesizes parent with child
+  stubs, then links checkpoints in an in-memory project.
+- **Strict Source Ordering**: Linearizes all transitive dependencies into
+  `packages -> interfaces -> modules` ahead of direct sources, ensuring
+  Vivado's `read_verilog -sv` encounters package declarations before module
+  consumers even if dependencies are listed out of order.
+
+### `vivado_impl`
+Executes physical implementation through design checkpoints:
+- **Incremental Stages**: Runs `opt_design`, `place_design`, `phys_opt_design`,
+  and `route_design` in succession.
+- **Reports**: Exports routability metrics, design rule check (DRC) reports,
+  utilization summaries, and static timing analyses.
+
+### `vivado_bitstream`
+Generates binary configuration bitstreams (`.bit`) and flash memory files
+(`.bin`) from routed checkpoints. Supports pre-bitstream Tcl hooks:
+
+```starlark
+vivado_bitstream(
+    name = "soc_bitstream",
+    impl = ":soc_impl",
+    tcl_hooks = ["bitstream_pre.tcl"],
+)
+```
 
 ---
 
@@ -194,6 +303,7 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 ├── LICENSE                      # Apache License, Version 2.0
 ├── NOTICE                       # Copyright attribution & third-party notices
 ├── README.md                    # Workspace overview and documentation
+├── parts/                       # Canonical silicon part definitions
 ├── rules/
 │   ├── defs.bzl                 # Public API entrypoint
 │   ├── providers.bzl            # Hardware Starlark providers
@@ -202,9 +312,10 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 │   ├── sv/                      # sv_library, verilator rules & tests
 │   ├── test/                    # providers_test and style_test
 │   ├── toolchains/              # Vivado and Verilator toolchains
-│   └── xilinx/                  # xvlog, xelab, xsim_test & simulation tests
+│   └── xilinx/                  # FPGA synthesis, impl, bitstream & xsim
 └── examples/
-    └── counter/                 # Parameterized counter RTL & dual-sim tests
+    ├── counter/                 # Parameterized counter RTL & dual-sim tests
+    └── ip_core/                 # Vivado IP Catalog core generation example
 ```
 
 ## Contributing & Agent Guidelines

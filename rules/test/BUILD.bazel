@@ -18,6 +18,16 @@ load(":providers_test.bzl", "providers_test_suite")
 providers_test_suite(name = "providers_test")
 
 py_test(
+    name = "utilization_runner_test",
+    srcs = ["utilization_runner_test.py"],
+)
+
+py_test(
+    name = "timing_runner_test",
+    srcs = ["timing_runner_test.py"],
+)
+
+py_test(
     name = "style_test",
     srcs = ["style_test.py"],
     tags = ["local", "no-sandbox", "external"],

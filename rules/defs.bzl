@@ -50,6 +50,42 @@ load(
     _verilator_test = "verilator_test",
 )
 load(
+    "//rules/xilinx:vivado_bitstream.bzl",
+    _vivado_bitstream = "vivado_bitstream",
+)
+load(
+    "//rules/xilinx:vivado_board.bzl",
+    _vivado_board = "vivado_board",
+)
+load(
+    "//rules/xilinx:vivado_impl.bzl",
+    _vivado_impl = "vivado_impl",
+)
+load(
+    "//rules/xilinx:vivado_ip.bzl",
+    _vivado_ip = "vivado_ip",
+)
+load(
+    "//rules/xilinx:vivado_part.bzl",
+    _vivado_part = "vivado_part",
+)
+load(
+    "//rules/xilinx:vivado_synth.bzl",
+    _vivado_synth = "vivado_synth",
+)
+load(
+    "//rules/xilinx:vivado_timing_test.bzl",
+    _vivado_timing_test = "vivado_timing_test",
+)
+load(
+    "//rules/xilinx:vivado_utilization_test.bzl",
+    _vivado_utilization_test = "vivado_utilization_test",
+)
+load(
+    "//rules/xilinx:xdc_library.bzl",
+    _xdc_library = "xdc_library",
+)
+load(
     "//rules/xilinx:xelab.bzl",
     _xelab = "xelab",
 )
@@ -84,3 +120,14 @@ verilator_test = _verilator_test
 xelab = _xelab
 xsim_test = _xsim_test
 xvlog = _xvlog
+
+# AMD / Xilinx Hardware & Implementation Rules
+vivado_bitstream = _vivado_bitstream
+vivado_board = _vivado_board
+vivado_impl = _vivado_impl
+vivado_ip = _vivado_ip
+vivado_part = _vivado_part
+vivado_synth = _vivado_synth
+vivado_timing_test = _vivado_timing_test
+vivado_utilization_test = _vivado_utilization_test
+xdc_library = _xdc_library

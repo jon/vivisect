@@ -19,6 +19,8 @@ load(
     "sv_package",
     "verilator_lint_test",
     "verilator_test",
+    "vivado_synth",
+    "vivado_utilization_test",
     "xsim_test",
     "xvlog",
 )
@@ -131,7 +133,7 @@ verilator_lint_test(
     deps = [":param_if"],
 )
 
-# Test 7: Out-of-order dependency resolution in verilator_library
+# Test 7: Out-of-order dependency resolution in vivado_synth and verilator_library
 sv_package(
     name = "ooo_pkg",
     srcs = ["ooo_pkg.sv"],
@@ -146,6 +148,25 @@ sv_library(
     name = "ooo_tb_lib",
     srcs = ["ooo_tb.sv"],
     deps = [":ooo_module"],
+)
+
+# Reverse dependency ordering: module listed before package
+vivado_synth(
+    name = "ooo_synth",
+    out_of_context = True,
+    part = "//parts:xc7a100tcsg324-1",
+    top = "ooo_module",
+    deps = [
+        ":ooo_module",
+        ":ooo_pkg",
+    ],
+)
+
+vivado_utilization_test(
+    name = "test_out_of_order_synth",
+    checkpoint = ":ooo_synth",
+    max_luts = 100,
+    max_registers = 100,
 )
 
 verilator_test(

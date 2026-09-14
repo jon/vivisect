@@ -1,0 +1,46 @@
+# Copyright 2026 The Vivisect Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+load("//rules:defs.bzl", "vivado_ip")
+
+package(default_visibility = ["//visibility:public"])
+
+vivado_ip(
+    name = "addsub_8bit",
+    config = {
+        "CONFIG.A_Width": "8",
+        "CONFIG.B_Width": "8",
+        "CONFIG.Latency": "1",
+        "CONFIG.Out_Width": "8",
+    },
+    ip_name = "c_addsub",
+    module_name = "addsub_8bit",
+    part = "//parts:xc7a100tcsg324-1",
+)
+
+vivado_ip(
+    name = "bram_rom_16x8",
+    config = {
+        "CONFIG.Coe_File": "rom_init.coe",
+        "CONFIG.Load_Init_File": "true",
+        "CONFIG.Memory_Type": "Single_Port_ROM",
+        "CONFIG.Read_Width_A": "8",
+        "CONFIG.Write_Depth_A": "16",
+        "CONFIG.Write_Width_A": "8",
+    },
+    extra_inputs = ["rom_init.coe"],
+    ip_name = "blk_mem_gen",
+    module_name = "bram_rom_16x8",
+    part = "//parts:xc7a100tcsg324-1",
+)
