@@ -5,6 +5,18 @@ This product includes software developed at
 Vivisect (https://github.com/vivisect-eda/vivisect).
 
 ===============================================================================
+Third-Party Hardware Board Constraints
+===============================================================================
+
+This product includes hardware pinout constraint definitions derived from
+reference materials published by Digilent, Inc.:
+
+  * Arty A7-100T Master XDC (vendor/digilent/arty_a7_100/Arty-A7-100-Master.xdc)
+    Upstream repository: https://github.com/Digilent/digilent-xdc
+    Original constraint definitions copyright Digilent, Inc.
+    Used for physical pin mapping and FPGA board target integration.
+
+===============================================================================
 External Toolchain Boundaries & Operational Interfaces
 ===============================================================================
 

@@ -304,6 +304,7 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 ├── NOTICE                       # Copyright attribution & third-party notices
 ├── README.md                    # Workspace overview and documentation
 ├── parts/                       # Canonical silicon part definitions
+├── vendor/                      # Third-party upstream board constraints
 ├── rules/
 │   ├── defs.bzl                 # Public API entrypoint
 │   ├── providers.bzl            # Hardware Starlark providers
