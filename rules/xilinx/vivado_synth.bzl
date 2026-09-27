@@ -137,7 +137,14 @@ def _vivado_synth_impl(ctx):
     util_json_file = ctx.actions.declare_file(ctx.label.name + "_utilization.json")
     util_rpt_file = ctx.actions.declare_file(ctx.label.name + "_utilization.rpt")
     log_file = ctx.actions.declare_file(ctx.label.name + ".log")
-    stub_file = ctx.actions.declare_file(ctx.label.name + "_stub.v") if ctx.attr.out_of_context else None
+    generated_stub_file = None
+    if ctx.file.stub:
+        stub_file = ctx.file.stub
+    elif ctx.attr.out_of_context:
+        generated_stub_file = ctx.actions.declare_file(ctx.label.name + "_stub.v")
+        stub_file = generated_stub_file
+    else:
+        stub_file = None
 
     # 6. Generate Synthesis Tcl Script
     tcl_lines = [
@@ -156,7 +163,10 @@ def _vivado_synth_impl(ctx):
 
     # Add cell black box stubs
     for st in cell_stubs:
-        tcl_lines.append("    read_verilog \"%s\"" % st.path)
+        if st.path.endswith(".sv"):
+            tcl_lines.append("    read_verilog -sv \"%s\"" % st.path)
+        else:
+            tcl_lines.append("    read_verilog \"%s\"" % st.path)
 
     # Add synthesis constraints
     for x in dedup_xdc:
@@ -202,7 +212,7 @@ def _vivado_synth_impl(ctx):
 
     # Write final checkpoint and reports
     tcl_lines.append("    write_checkpoint -force synth.dcp")
-    if ctx.attr.out_of_context:
+    if generated_stub_file:
         tcl_lines.append("    write_verilog -mode synth_stub -force synth_stub.v")
     tcl_lines.append("    report_utilization -json synth_utilization.json")
     tcl_lines.append("    report_utilization -file synth_utilization.rpt")
@@ -227,8 +237,8 @@ def _vivado_synth_impl(ctx):
         "--copy-output", "synth_utilization.json:" + util_json_file.path,
         "--copy-output", "synth_utilization.rpt:" + util_rpt_file.path,
     ]
-    if stub_file:
-        runner_args.extend(["--sanitize-verilog-output", "synth_stub.v:" + stub_file.path])
+    if generated_stub_file:
+        runner_args.extend(["--sanitize-verilog-output", "synth_stub.v:" + generated_stub_file.path])
 
     runner_args.extend([
         "--",
@@ -245,8 +255,8 @@ def _vivado_synth_impl(ctx):
     )
 
     outputs = [dcp_file, util_json_file, util_rpt_file, log_file]
-    if stub_file:
-        outputs.append(stub_file)
+    if generated_stub_file:
+        outputs.append(generated_stub_file)
 
     exec_reqs = {}
     if ctx.attr.local:
@@ -282,7 +292,7 @@ def _vivado_synth_impl(ctx):
         ),
     ]
 
-    if ctx.attr.out_of_context and stub_file:
+    if (ctx.attr.out_of_context or ctx.file.stub) and stub_file:
         providers.append(
             SvInfo(
                 srcs = depset([stub_file]),
@@ -344,6 +354,10 @@ vivado_synth = rule(
         "out_of_context": attr.bool(
             default = False,
             doc = "Synthesize module out-of-context (OOC), disabling I/O buffer insertion and generating stub.",
+        ),
+        "stub": attr.label(
+            allow_single_file = [".sv", ".v"],
+            doc = "Optional explicit black-box stub file (e.g. for SystemVerilog interface ports). If omitted and out_of_context=True, Vivado generates a Verilog-1995 stub.",
         ),
         "flatten_hierarchy": attr.string(
             default = "",

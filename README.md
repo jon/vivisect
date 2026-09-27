@@ -192,14 +192,18 @@ Synthesizes SystemVerilog/Verilog designs using AMD Vivado:
 - **Out-of-Context (OOC)**: Set `out_of_context = True` to disable I/O buffer
   insertion and automatically generate a black-box Verilog stub
   (`<name>_stub.v`).
+- **Explicit Black-Box Stubs (`stub`)**: Supply an explicit black-box stub
+  file (`.sv` or `.v`) to support SystemVerilog interface ports and bypass
+  default Verilog-1995 stub generation.
 - **Hermetic Stubs**: Automatically sanitizes generated black-box stubs by
   stripping execution timestamps (`// Date`), hostnames (`// Host`), and
   scratch paths (`// Command`) to guarantee byte-for-byte reproducibility
   across builds.
 - **Hierarchical Cell Linking (`cells`)**: Stitch child out-of-context
   checkpoints into a parent netlist using `cells = {"u_instance":
-  ":child_ooc"}`. Synthesis runs in two stages: synthesizes parent with child
-  stubs, then links checkpoints in an in-memory project.
+  ":child_ooc"}`. Automatically compiles `.sv` cell stubs using
+  `read_verilog -sv`. Synthesis runs in two stages: synthesizes parent with
+  child stubs, then links checkpoints in an in-memory project.
 - **Strict Source Ordering**: Linearizes all transitive dependencies into
   `packages -> interfaces -> modules` ahead of direct sources, ensuring
   Vivado's `read_verilog -sv` encounters package declarations before module
