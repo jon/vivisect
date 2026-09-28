@@ -12,8 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# 50 MHz clock constraint for RV32I RISC-V SoC
-create_clock -period 20.000 -name clk [get_ports clk]
+# 100 MHz input clock constraint for Arty A7 board
+create_clock -period 10.000 -name clk [get_ports clk]
+
+# Generated 25 MHz system clock for RV32I RISC-V SoC
+create_generated_clock -name sys_clk -source [get_ports clk] -divide_by 4 [get_pins u_clk_bufg/O]
 
 # Voltage and configuration bank voltage select for Arty A7
 set_property CONFIG_VOLTAGE 3.3 [current_design]
@@ -21,7 +24,7 @@ set_property CFGBVS VCCO [current_design]
 
 # Clock and Reset
 set_property -dict { PACKAGE_PIN E3  IOSTANDARD LVCMOS33 } [get_ports { clk }]
-set_property -dict { PACKAGE_PIN C2  IOSTANDARD LVCMOS33 } [get_ports { rst_n }]
+set_property -dict { PACKAGE_PIN C2  IOSTANDARD LVCMOS33 PULLUP true } [get_ports { rst_n }]
 
 # USB-UART TX
 set_property -dict { PACKAGE_PIN D10 IOSTANDARD LVCMOS33 } [get_ports { uart_tx_serial }]

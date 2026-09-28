@@ -16,12 +16,15 @@ load(
     "//rules:defs.bzl",
     "sv_library",
     "vivado_bitstream",
+    "vivado_hw_test",
     "vivado_impl",
+    "vivado_program",
     "vivado_synth",
     "vivado_timing_test",
     "vivado_utilization_test",
     "xdc_library",
 )
+
 
 package(default_visibility = ["//visibility:public"])
 
@@ -165,3 +168,15 @@ vivado_bitstream(
     bin_file = True,
     checkpoint = ":top_impl",
 )
+
+# 7. Hardware Programming & In-the-Loop Testing
+vivado_program(
+    name = "top_program",
+    bitstream = ":top_bitstream",
+)
+
+vivado_hw_test(
+    name = "top_hw_test",
+    bitstream = ":top_bitstream",
+)
+

@@ -105,3 +105,15 @@ VerilatorCppInfo = provider(
         "top": "string: Top-level module name.",
     },
 )
+
+VivadoBitstreamInfo = provider(
+    doc = "Propagates FPGA bitstream artifacts (.bit, optional .bin, and optional debug probes .ltx).",
+    fields = {
+        "bit": "File: Primary FPGA configuration bitstream (.bit) file.",
+        "bin": "File: Optional raw binary file (.bin) for SPI flash memory programming, or None.",
+        "probes": "File: Optional ILA/VIO debug probes file (.ltx), or None.",
+        "top": "string: Top-level module name.",
+        "part": "string: Target FPGA canonical part string.",
+        "checkpoint": "File: The implementation checkpoint (.dcp) used to generate the bitstream.",
+    },
+)

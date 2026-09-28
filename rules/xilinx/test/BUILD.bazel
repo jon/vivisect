@@ -13,7 +13,7 @@
 # limitations under the License.
 
 load("@rules_python//python:defs.bzl", "py_test")
-load("//rules:defs.bzl", "xsim_test", "xvlog")
+load("//rules:defs.bzl", "vivado_hw_test", "xsim_test", "xvlog")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -98,3 +98,23 @@ py_test(
     ],
     tags = ["requires-network"],
 )
+
+py_test(
+    name = "hw_runner_test",
+    srcs = ["hw_runner_test.py"],
+    data = [
+        "//rules/support:hw_client.py",
+        "//rules/support:hw_program_runner.py",
+        "//rules/support:hw_test_runner.py",
+        "//rules/support:target_lock.py",
+    ],
+)
+
+vivado_hw_test(
+    name = "mock_hil_test",
+    bitstream = "//examples/hierarchical_counter:top_bitstream",
+    mock = True,
+    uart_expect = ["ROK"],
+)
+
+

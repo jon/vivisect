@@ -14,7 +14,7 @@
 
 """AMD Vivado bitstream generation rule producing .bit and .bin files."""
 
-load("//rules:providers.bzl", "VivadoDcpInfo")
+load("//rules:providers.bzl", "VivadoBitstreamInfo", "VivadoDcpInfo")
 
 VIVADO_TOOLCHAIN_TYPE = Label("//rules/toolchains:vivado_toolchain_type")
 
@@ -24,6 +24,7 @@ def _vivado_bitstream_impl(ctx):
 
     bit_file = ctx.actions.declare_file(ctx.label.name + ".bit")
     bin_file = ctx.actions.declare_file(ctx.label.name + ".bin") if ctx.attr.bin_file else None
+    probes_file = ctx.actions.declare_file(ctx.label.name + ".ltx") if ctx.attr.probes else None
     log_file = ctx.actions.declare_file(ctx.label.name + ".log")
     bit_script = ctx.actions.declare_file(ctx.label.name + "_bitstream.tcl")
 
@@ -38,6 +39,9 @@ def _vivado_bitstream_impl(ctx):
         tcl_lines.append("    lappend bit_args -bin_file")
     for flag in ctx.attr.bitstream_flags:
         tcl_lines.append("    lappend bit_args \"%s\"" % flag)
+
+    if probes_file:
+        tcl_lines.append("    catch {write_debug_probes -force probes.ltx}")
 
     tcl_lines.extend([
         "    write_bitstream {*}$bit_args",
@@ -61,6 +65,8 @@ def _vivado_bitstream_impl(ctx):
     ]
     if bin_file:
         runner_args.extend(["--copy-output", "bitstream.bin:" + bin_file.path])
+    if probes_file:
+        runner_args.extend(["--copy-output", "probes.ltx:" + probes_file.path])
 
     runner_args.extend([
         "--",
@@ -74,6 +80,8 @@ def _vivado_bitstream_impl(ctx):
     outputs = [bit_file, log_file]
     if bin_file:
         outputs.append(bin_file)
+    if probes_file:
+        outputs.append(probes_file)
 
     inputs = depset(
         [dcp_info.dcp, bit_script] + ctx.files.tcl_hooks,
@@ -94,8 +102,18 @@ def _vivado_bitstream_impl(ctx):
         execution_requirements = exec_reqs,
     )
 
+    bitstream_info = VivadoBitstreamInfo(
+        bit = bit_file,
+        bin = bin_file,
+        probes = probes_file,
+        top = dcp_info.top,
+        part = dcp_info.part,
+        checkpoint = dcp_info.dcp,
+    )
+
     return [
         DefaultInfo(files = depset(outputs)),
+        bitstream_info,
     ]
 
 vivado_bitstream = rule(
@@ -110,6 +128,10 @@ vivado_bitstream = rule(
         "bin_file": attr.bool(
             default = False,
             doc = "Whether to generate a raw binary file (.bin) for SPI flash memory programming.",
+        ),
+        "probes": attr.bool(
+            default = False,
+            doc = "Whether to generate an ILA/VIO debug probes file (.ltx).",
         ),
         "bitstream_flags": attr.string_list(
             default = [],
@@ -127,3 +149,4 @@ vivado_bitstream = rule(
     },
     toolchains = [VIVADO_TOOLCHAIN_TYPE],
 )
+

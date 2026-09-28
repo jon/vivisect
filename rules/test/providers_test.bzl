@@ -20,6 +20,7 @@ load(
     "SvInfo",
     "TclInfo",
     "VerilatorCppInfo",
+    "VivadoBitstreamInfo",
     "VivadoBoardInfo",
     "VivadoConstraintsInfo",
     "VivadoDcpInfo",
@@ -122,6 +123,21 @@ def _providers_test_impl(ctx):
         top = "counter",
     )
     asserts.equals(env, "counter", vcpp.top)
+
+    # Test VivadoBitstreamInfo
+    bitstream = VivadoBitstreamInfo(
+        bit = None,
+        bin = None,
+        probes = None,
+        top = "soc_top",
+        part = "xc7a100tcsg324-1",
+        checkpoint = None,
+    )
+    asserts.equals(env, "soc_top", bitstream.top)
+    asserts.equals(env, "xc7a100tcsg324-1", bitstream.part)
+    asserts.equals(env, None, bitstream.bit)
+    asserts.equals(env, None, bitstream.bin)
+    asserts.equals(env, None, bitstream.probes)
 
     return unittest.end(env)
 

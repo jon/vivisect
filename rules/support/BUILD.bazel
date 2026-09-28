@@ -15,5 +15,9 @@
 package(default_visibility = ["//visibility:public"])
 
 exports_files([
+    "hw_client.py",
+    "hw_program_runner.py",
+    "hw_test_runner.py",
     "run_isolated.py",
+    "target_lock.py",
 ])

@@ -1,22 +1,28 @@
+// Copyright 2026 The Vivisect Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // RISC-V 32-bit Machine Code Firmware
-// Tests: Stack, UART, Fibonacci loop, RAM store, GPIO buttons/LEDs, Pass signature
+// Tests: Stack, Fibonacci loop, RAM store, GPIO buttons/LEDs, Pass signature, Periodic UART TX
 @00000000
 00001137
 800001b7
-05200213
-0041a823
-04f00213
-0041a823
-04b00213
-0041a823
-00a00213
-0041a823
 00000293
 00100313
 00800393
-00628433
+00628e33
 00030293
-00040313
+000e0313
 fff38393
 fe0398e3
 10602023
@@ -27,4 +33,25 @@ fe0398e3
 deadc537
 eef50513
 02a1a023
-0000006f
+0101a283
+fe029ee3
+04f00313
+0061a823
+0101a283
+fe029ee3
+04b00313
+0061a823
+0101a283
+fe029ee3
+00d00313
+0061a823
+0101a283
+fe029ee3
+00a00313
+0061a823
+0101a283
+fe029ee3
+0000c3b7
+fff38393
+fe039ee3
+fadff06f

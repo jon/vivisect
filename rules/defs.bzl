@@ -19,6 +19,7 @@ load(
     _SvInfo = "SvInfo",
     _TclInfo = "TclInfo",
     _VerilatorCppInfo = "VerilatorCppInfo",
+    _VivadoBitstreamInfo = "VivadoBitstreamInfo",
     _VivadoBoardInfo = "VivadoBoardInfo",
     _VivadoConstraintsInfo = "VivadoConstraintsInfo",
     _VivadoDcpInfo = "VivadoDcpInfo",
@@ -58,6 +59,10 @@ load(
     _vivado_board = "vivado_board",
 )
 load(
+    "//rules/xilinx:vivado_hw_test.bzl",
+    _vivado_hw_test = "vivado_hw_test",
+)
+load(
     "//rules/xilinx:vivado_impl.bzl",
     _vivado_impl = "vivado_impl",
 )
@@ -68,6 +73,10 @@ load(
 load(
     "//rules/xilinx:vivado_part.bzl",
     _vivado_part = "vivado_part",
+)
+load(
+    "//rules/xilinx:vivado_program.bzl",
+    _vivado_program = "vivado_program",
 )
 load(
     "//rules/xilinx:vivado_synth.bzl",
@@ -102,6 +111,7 @@ load(
 SvInfo = _SvInfo
 TclInfo = _TclInfo
 VerilatorCppInfo = _VerilatorCppInfo
+VivadoBitstreamInfo = _VivadoBitstreamInfo
 VivadoBoardInfo = _VivadoBoardInfo
 VivadoConstraintsInfo = _VivadoConstraintsInfo
 VivadoDcpInfo = _VivadoDcpInfo
@@ -124,10 +134,13 @@ xvlog = _xvlog
 # AMD / Xilinx Hardware & Implementation Rules
 vivado_bitstream = _vivado_bitstream
 vivado_board = _vivado_board
+vivado_hw_test = _vivado_hw_test
 vivado_impl = _vivado_impl
 vivado_ip = _vivado_ip
 vivado_part = _vivado_part
+vivado_program = _vivado_program
 vivado_synth = _vivado_synth
 vivado_timing_test = _vivado_timing_test
 vivado_utilization_test = _vivado_utilization_test
 xdc_library = _xdc_library
+

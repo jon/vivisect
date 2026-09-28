@@ -468,6 +468,76 @@ Compiles SystemVerilog/Verilog sources into an xsim library.
 
 ---
 
+## FPGA Programming & Hardware-in-the-Loop (HIL) Testing
+
+Vivisect includes rules for programming target FPGAs via AMD Vivado Hardware
+Manager and executing automated hardware-in-the-loop (HIL) tests against live
+devices:
+
+### `vivado_program`
+Programs an FPGA bitstream onto physical target hardware using Vivado Hardware
+Manager (`hw_server`).
+- **`bitstream`**: Label of a `vivado_bitstream` target supplying the bitstream
+  (`.bit`) and optional debug probes (`.ltx`).
+- **`device_index`**: Zero-based index of the target FPGA within the JTAG chain
+  (default: `0`).
+- **`hw_server_url`**: Network address of the AMD `hw_server` daemon (default:
+  `"localhost:3121"`).
+- **`cable`**: JTAG cable description or serial filter for multi-board setups.
+- **`probes`**: Explicit debug probes (`.ltx`) file (overrides bitstream
+  probes).
+- **`target_lock`**: Custom hardware lock ID to prevent concurrent access to the
+  same physical device across parallel processes (defaults to the FPGA part).
+- **`lock_timeout`**: Maximum seconds to wait to acquire the device lock
+  (default: `120.0`).
+- **Execution**: Run via `bazel run //path/to:target_program`.
+- **Default Tags**: Marked `["manual", "local", "exclusive"]` to prevent remote
+  execution and ensure single-action physical hardware access.
+
+### `vivado_hw_test`
+Configures physical FPGA hardware and executes automated assertions against
+the running bitstream.
+- **`bitstream`**: Label of the `vivado_bitstream` target to deploy and test.
+- **`test_mode`**: Test protocol or assertion driver:
+  - `"uart"`: Validates serial output emitted by the FPGA against expected
+    regular expressions.
+  - `"tcl"`: Executes a custom Vivado Tcl script interacting with the FPGA
+    via Vivado Hardware Manager or debug cores (ILA / VIO).
+  - `"runner"`: Executes a custom test binary or script against the programmed
+    FPGA.
+- **`uart_port`**: Serial port device path (e.g. `"/dev/ttyUSB1"`). If omitted,
+  auto-detects connected FTDI/Digilent serial bridges.
+- **`uart_baud`**: UART baud rate (default: `115200`).
+- **`uart_expect`**: List of regex patterns that must be received from the UART.
+- **`uart_timeout`**: Maximum wait time in seconds for UART assertions (default:
+  `15.0`).
+- **`tcl_assert_script`**: Custom Tcl script for `"tcl"` test mode.
+- **`test_runner`**: Executable target for `"runner"` test mode.
+- **`mock`**: When `True`, runs in simulated hardware mode using loopback pipes,
+  verifying orchestration logic in CI environments without attached physical
+  hardware.
+- **`target_lock`**: Mutex identifier for the physical device.
+- **Pre-Configuration Serial Capture**: When running in `"uart"` mode, the test
+  harness pre-opens the serial interface prior to triggering FPGA configuration,
+  ensuring no initial boot bytes or power-on transmissions are dropped.
+- **Execution**: Run via `bazel test //path/to:target_hw_test`.
+- **Default Tags**: Marked `["manual", "local", "exclusive"]`.
+
+### Hardware Mutex & Stale Lock Recovery
+Physical hardware cannot be safely accessed concurrently by multiple Vivado
+instances or serial listeners. Vivisect incorporates an advisory locking layer
+(`rules/support/target_lock.py`) using system `flock` and structured metadata:
+- Locks are keyed per physical board or part ID in `/tmp/.vivisect_hw_locks/`.
+- Lock files record PID, timestamp, command line, and hostname.
+- **Stale Lock Recovery**: If an earlier test was interrupted (`SIGKILL`, host
+  crash), active processes probe the recorded PID with `kill(pid, 0)` and
+  automatically purge stale locks without manual intervention.
+- **In-Process Re-entrancy**: Supports nested operations within the same process
+  (e.g., test harness acquiring the target lock and subsequently invoking the
+  programming runner).
+
+---
+
 ## Repository Layout
 
 ```

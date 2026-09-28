@@ -18,13 +18,16 @@ load(
     "verilator_lint_test",
     "verilator_test",
     "vivado_bitstream",
+    "vivado_hw_test",
     "vivado_impl",
+    "vivado_program",
     "vivado_synth",
     "vivado_timing_test",
     "vivado_utilization_test",
     "xdc_library",
     "xsim_test",
 )
+
 
 package(default_visibility = ["//visibility:public"])
 
@@ -57,6 +60,7 @@ sv_library(
 sv_library(
     name = "riscv_soc_lib",
     srcs = ["riscv_soc_top.sv"],
+    data = ["firmware.mem"],
     deps = [
         ":gpio_controller_lib",
         ":rv32i_core_lib",
@@ -65,6 +69,7 @@ sv_library(
         ":uart_tx_lib",
     ],
 )
+
 
 sv_library(
     name = "soc_tb_lib",
@@ -110,10 +115,15 @@ vivado_synth(
     name = "soc_synth",
     board = "//boards/digilent/arty_a7_100:arty_a7_100",
     out_of_context = False,
+    parameters = {
+        "CLKS_PER_BIT": "217",
+        "MEM_INIT_FILE": "examples/riscv_soc/firmware.mem",
+    },
     top = "riscv_soc_top",
     deps = [":riscv_soc_lib"],
     xdc = [":riscv_soc_xdc"],
 )
+
 
 vivado_impl(
     name = "soc_impl",
@@ -142,3 +152,18 @@ vivado_bitstream(
     checkpoint = ":soc_impl",
     tcl_hooks = ["bitstream_pre.tcl"],
 )
+
+vivado_program(
+    name = "soc_program",
+    bitstream = ":soc_bitstream",
+)
+
+vivado_hw_test(
+    name = "soc_hw_test",
+    bitstream = ":soc_bitstream",
+    uart_baud = 115200,
+    uart_expect = ["OK"],
+    uart_timeout = "15.0",
+)
+
+

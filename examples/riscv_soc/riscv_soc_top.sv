@@ -45,18 +45,50 @@ module riscv_soc_top #(
   wire is_uart = (core_addr[31:4] == 28'h8000001); // 0x8000_0010 - 0x8000_001F
   wire is_pass = (core_addr == 32'h8000_0020);
 
+  // Clock divider: 100 MHz board clock -> 25 MHz system clock
+  logic [1:0] clk_div = '0;
+  always_ff @(posedge clk) begin
+    clk_div <= clk_div + 1'b1;
+  end
+
+`ifdef SYNTHESIS
+  wire sys_clk;
+  BUFG u_clk_bufg (
+    .I(clk_div[1]),
+    .O(sys_clk)
+  );
+`else
+  wire sys_clk = clk_div[1];
+`endif
+
   // RAM read data
   wire [31:0] ram_rdata;
   wire [31:0] gpio_rdata;
   logic [31:0] uart_rdata;
+
+  // Internal power-on reset generator
+  logic [7:0] por_cnt = '0;
+  logic sys_rst_n = 1'b0;
+  /* verilator lint_off UNUSEDSIGNAL */
+  wire _unused_rst_n = rst_n;
+  /* verilator lint_on UNUSEDSIGNAL */
+
+  always_ff @(posedge sys_clk) begin
+    if (por_cnt != 8'hFF) begin
+      por_cnt   <= por_cnt + 1'b1;
+      sys_rst_n <= 1'b0;
+    end else begin
+      sys_rst_n <= 1'b1;
+    end
+  end
 
   // UART TX control
   logic [7:0] uart_tx_byte;
   logic       uart_tx_start;
   wire        uart_tx_busy;
 
-  always_ff @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+  always_ff @(posedge sys_clk or negedge sys_rst_n) begin
+    if (!sys_rst_n) begin
       uart_tx_start <= 1'b0;
       uart_tx_byte  <= '0;
       sim_pass_sig  <= '0;
@@ -73,6 +105,7 @@ module riscv_soc_top #(
       end
     end
   end
+
 
   assign uart_rdata = {31'd0, uart_tx_busy};
 
@@ -91,8 +124,8 @@ module riscv_soc_top #(
 
   // 1. CPU Core
   rv32i_core u_cpu (
-    .clk(clk),
-    .rst_n(rst_n),
+    .clk(sys_clk),
+    .rst_n(sys_rst_n),
     .mem_addr(core_addr),
     .mem_wdata(core_wdata),
     .mem_be(core_be),
@@ -107,7 +140,7 @@ module riscv_soc_top #(
     .WORDS(2048),
     .INIT_FILE(MEM_INIT_FILE)
   ) u_ram (
-    .clk(clk),
+    .clk(sys_clk),
     .req(core_req && is_ram),
     .we(core_we),
     .be(core_be),
@@ -118,8 +151,8 @@ module riscv_soc_top #(
 
   // 3. GPIO Controller
   gpio_controller u_gpio (
-    .clk(clk),
-    .rst_n(rst_n),
+    .clk(sys_clk),
+    .rst_n(sys_rst_n),
     .req(core_req && is_gpio),
     .we(core_we),
     .be(core_be),
@@ -134,8 +167,8 @@ module riscv_soc_top #(
   uart_tx #(
     .CLKS_PER_BIT(CLKS_PER_BIT)
   ) u_uart (
-    .clk(clk),
-    .rst_n(rst_n),
+    .clk(sys_clk),
+    .rst_n(sys_rst_n),
     .tx_data(uart_tx_byte),
     .tx_start(uart_tx_start),
     .tx_serial(uart_tx_serial),
